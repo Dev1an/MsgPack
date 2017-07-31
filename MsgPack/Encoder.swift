@@ -46,7 +46,7 @@ extension MsgPack.Serialiser: SingleValueEncodingContainer {
 	}
 	
 	func encodeNil() throws {
-		throw Error.notImplemented
+		storage = .nil
 	}
 	
 	func encode(_ value: Bool) throws {
