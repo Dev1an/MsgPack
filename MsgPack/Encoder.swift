@@ -8,7 +8,20 @@
 
 import Foundation
 
-class Encoder: Swift.Encoder {
+public class Encoder {
+	let serialiser = Serialiser()
+	
+	public init() {}
+	
+	public func encode<T : Encodable>(_ value: T) throws -> Data {
+		try value.encode(to: serialiser)
+		var data = Data()
+		serialiser.storage?.appendTo(data: &data)
+		return data
+	}
+}
+
+class Serialiser: Swift.Encoder {
 	var codingPath = [CodingKey]()
 	var userInfo = [CodingUserInfoKey : Any]()
 	
@@ -25,16 +38,9 @@ class Encoder: Swift.Encoder {
 	func singleValueContainer() -> SingleValueEncodingContainer {
 		return self
 	}
-	
-	public func dataFor<T : Encodable>(_ value: T) throws -> Data {
-		try value.encode(to: self)
-		var data = Data()
-		storage?.appendTo(data: &data)
-		return data
-	}
 }
 
-extension MsgPack.Encoder: SingleValueEncodingContainer {
+extension MsgPack.Serialiser: SingleValueEncodingContainer {
 	enum Error: Swift.Error {
 		case notImplemented
 	}
