@@ -3,15 +3,19 @@
 import MsgPack
 import Foundation
 
-var number: UInt16? = 0x0906
-
 let encoder = Encoder()
 
-let data = try encoder.encode(number)
+let data = try encoder.encode(0x0102030405060708)
+
+String(data[0], radix: 16)
+
 data[1]
 data[2]
+data[3]
+data[4]
+data[5]
+data[6]
+data[7]
+data[8]
 
-number = nil
-
-let data2 = try encoder.encode(number)
-data2[0]
+try encoder.encode(Int8(6))[1]

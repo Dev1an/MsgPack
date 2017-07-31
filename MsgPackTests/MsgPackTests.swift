@@ -33,7 +33,7 @@ class MsgPackTests: XCTestCase {
 			XCTFail(error.localizedDescription)
 		}
 	}
-	
+
 	func testEncodeFalse() {
 		do {
 			let data = try encoder.encode(false)
@@ -43,7 +43,7 @@ class MsgPackTests: XCTestCase {
 			XCTFail(error.localizedDescription)
 		}
 	}
-	
+
 	func testEncodeUInt8() {
 		do {
 			let number: UInt8 = 5
@@ -55,7 +55,7 @@ class MsgPackTests: XCTestCase {
 			XCTFail(error.localizedDescription)
 		}
 	}
-	
+
 	func testEncodeUInt16() {
 		do {
 			let data = try encoder.encode(UInt16(0x0506))
@@ -67,7 +67,7 @@ class MsgPackTests: XCTestCase {
 			XCTFail(error.localizedDescription)
 		}
 	}
-	
+
 	func testEncodeUInt32() {
 		do {
 			let data = try encoder.encode(UInt32(0x05060708))
@@ -81,7 +81,7 @@ class MsgPackTests: XCTestCase {
 			XCTFail(error.localizedDescription)
 		}
 	}
-	
+
 	func testEncodeUInt64() {
 		do {
 			let data = try encoder.encode(UInt64(0x0506070809101112))
@@ -100,11 +100,10 @@ class MsgPackTests: XCTestCase {
 		}
 	}
 	
-	func testPerformanceOf1MilionUInt32Encodings() {
-		var d = Data()
+	func testPerformanceOf2MilionUInt32Encodings() {
 		self.measure {
-			for _ in 0 ..< 1000000 {
-				Format.uInt32(136315908).appendTo(data: &d)
+			for _ in 0 ..< 2000000 {
+				try! encoder.encode(UInt32(136315908))
 			}
 		}
 	}

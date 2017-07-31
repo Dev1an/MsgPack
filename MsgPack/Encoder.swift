@@ -54,27 +54,27 @@ extension MsgPack.Serialiser: SingleValueEncodingContainer {
 	}
 	
 	func encode(_ value: Int) throws {
-		throw Error.notImplemented
+		storage = .int(value)
 	}
 	
 	func encode(_ value: Int8) throws {
-		throw Error.notImplemented
+		storage = .int8(value)
 	}
 	
 	func encode(_ value: Int16) throws {
-		throw Error.notImplemented
+		storage = .int16(value)
 	}
 	
 	func encode(_ value: Int32) throws {
-		throw Error.notImplemented
+		storage = .int32(value)
 	}
 	
 	func encode(_ value: Int64) throws {
-		throw Error.notImplemented
+		storage = .int64(value)
 	}
 	
 	func encode(_ value: UInt) throws {
-		throw Error.notImplemented
+		storage = .uInt(value)
 	}
 	
 	func encode(_ value: UInt8) throws {
