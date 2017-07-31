@@ -6,7 +6,6 @@ import Foundation
 let encoder = Encoder()
 
 let integerData = try encoder.encode(0x0102030405060708)
-
 String(integerData[0], radix: 16)
 
 integerData[1]
@@ -18,13 +17,11 @@ integerData[6]
 integerData[7]
 integerData[8]
 
-let doubleData = try encoder.encode(2.5)
+let doubleData = try encoder.encode("Hello there 123456789012345678901")
 String(doubleData[0], radix: 16)
-doubleData[1]
-doubleData[2]
-doubleData[3]
-doubleData[4]
-doubleData[5]
-doubleData[6]
-doubleData[7]
-doubleData[8]
+
+String(doubleData[1], radix: 16)
+String(doubleData[2], radix: 16)
+String(doubleData[3], radix: 16)
+String(doubleData[4], radix: 16)
+String(doubleData[5], radix: 16)

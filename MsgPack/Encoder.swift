@@ -16,7 +16,7 @@ public class Encoder {
 	public func encode<T : Encodable>(_ value: T) throws -> Data {
 		try value.encode(to: serialiser)
 		var data = Data()
-		serialiser.storage?.appendTo(data: &data)
+		try serialiser.storage?.appendTo(data: &data)
 		return data
 	}
 }
@@ -42,7 +42,7 @@ class Serialiser: Swift.Encoder {
 
 extension MsgPack.Serialiser: SingleValueEncodingContainer {
 	enum Error: Swift.Error {
-		case notImplemented
+		case notImplemented, stringNotConvertibleToUTF8
 	}
 	
 	func encodeNil() throws {
@@ -54,7 +54,11 @@ extension MsgPack.Serialiser: SingleValueEncodingContainer {
 	}
 	
 	func encode(_ value: Int) throws {
-		storage = .int(value)
+		#if arch(arm) || arch(i386)
+			storage = .int32(Int32(value))
+		#else
+			storage = .int64(Int64(value))
+		#endif
 	}
 	
 	func encode(_ value: Int8) throws {
@@ -74,7 +78,11 @@ extension MsgPack.Serialiser: SingleValueEncodingContainer {
 	}
 	
 	func encode(_ value: UInt) throws {
-		storage = .uInt(value)
+		#if arch(arm) || arch(i386)
+			storage = .uInt32(UInt32(value))
+		#else
+			storage = .uInt64(UInt64(value))
+		#endif
 	}
 	
 	func encode(_ value: UInt8) throws {
@@ -102,7 +110,17 @@ extension MsgPack.Serialiser: SingleValueEncodingContainer {
 	}
 	
 	func encode(_ value: String) throws {
-		throw Error.notImplemented
+		guard let data = value.data(using: .utf8) else {throw Error.stringNotConvertibleToUTF8}
+		switch data.count {
+		case 1..<32:
+			storage = .fixString(data)
+		case 32..<256:
+			storage = .string8(data)
+		case 256..<65536:
+			storage = .string16(data)
+		default:
+			storage = .string32(data)
+		}
 	}
 	
 	func encode<T : Encodable>(_ value: T) throws {

@@ -10,7 +10,7 @@ import Foundation
 
 import Foundation
 
-enum Format {
+enum Format {	
 	case `nil`
 	
 	case boolean(Bool)
@@ -18,13 +18,11 @@ enum Format {
 	case positiveInt7(UInt8)
 	case negativeInt5(UInt8)
 	
-	case uInt  (UInt)
 	case uInt8 (UInt8)
 	case uInt16(UInt16)
 	case uInt32(UInt32)
 	case uInt64(UInt64)
 	
-	case int  (Int)
 	case int8 (Int8)
 	case int16(Int16)
 	case int32(Int32)
@@ -32,6 +30,11 @@ enum Format {
 	
 	case float32(Float)
 	case float64(Double)
+	
+	case fixString(Data)
+	case string8(Data)
+	case string16(Data)
+	case string32(Data)
 
 	func appendTo(data: inout Data) {
 		switch self {
@@ -81,12 +84,6 @@ enum Format {
 				}
 			})
 			data.append(newData)
-		case .uInt(let value):
-			#if arch(arm) || arch(i386)
-				Format.uInt32(UInt32(value)).appendTo(data: &data)
-			#else
-				Format.uInt64(UInt64(value)).appendTo(data: &data)
-			#endif
 			
 		// MARK: Signed integers
 		case .int8(let value):
@@ -125,12 +122,6 @@ enum Format {
 				}
 			})
 			data.append(newData)
-		case .int(let value):
-			#if arch(arm) || arch(i386)
-				Format.int32(Int32(value)).appendTo(data: &data)
-			#else
-				Format.int64(Int64(value)).appendTo(data: &data)
-			#endif
 			
 		// MARK: Floats
 		case .float32(let value):
@@ -151,6 +142,34 @@ enum Format {
 				}
 			})
 			data.append(newData)
+			
+		// MARK: Strings
+		case .fixString(let value):
+			data.append(UInt8(value.count) & 0b00011111 | 0b10100000)
+			data.append(value)
+		case .string8(let value):
+			data.append(contentsOf: [0xD9, UInt8(value.count)])
+			data.append(value)
+		case .string16(let value):
+			var prefix = Data(count: 3)
+			prefix.withUnsafeMutableBytes({ (byteContainer: UnsafeMutablePointer<UInt8>) -> Void in
+				byteContainer.pointee = 0xDA
+				byteContainer.advanced(by: 1).withMemoryRebound(to: UInt16.self, capacity: 1) {
+					$0.pointee = UInt16(value.count).bigEndian
+				}
+			})
+			data.append(prefix)
+			data.append(value)
+		case .string32(let value):
+			var prefix = Data(count: 5)
+			prefix.withUnsafeMutableBytes({ (byteContainer: UnsafeMutablePointer<UInt8>) -> Void in
+				byteContainer.pointee = 0xDB
+				byteContainer.advanced(by: 1).withMemoryRebound(to: UInt32.self, capacity: 1) {
+					$0.pointee = UInt32(value.count).bigEndian
+				}
+			})
+			data.append(prefix)
+			data.append(value)
 		}
 	}
 }
