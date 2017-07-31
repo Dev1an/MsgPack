@@ -5,17 +5,26 @@ import Foundation
 
 let encoder = Encoder()
 
-let data = try encoder.encode(0x0102030405060708)
+let integerData = try encoder.encode(0x0102030405060708)
 
-String(data[0], radix: 16)
+String(integerData[0], radix: 16)
 
-data[1]
-data[2]
-data[3]
-data[4]
-data[5]
-data[6]
-data[7]
-data[8]
+integerData[1]
+integerData[2]
+integerData[3]
+integerData[4]
+integerData[5]
+integerData[6]
+integerData[7]
+integerData[8]
 
-try encoder.encode(Int8(6))[1]
+let doubleData = try encoder.encode(2.5)
+String(doubleData[0], radix: 16)
+doubleData[1]
+doubleData[2]
+doubleData[3]
+doubleData[4]
+doubleData[5]
+doubleData[6]
+doubleData[7]
+doubleData[8]

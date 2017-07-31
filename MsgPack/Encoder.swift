@@ -94,11 +94,11 @@ extension MsgPack.Serialiser: SingleValueEncodingContainer {
 	}
 	
 	func encode(_ value: Float) throws {
-		throw Error.notImplemented
+		storage = .float32(value)
 	}
 	
 	func encode(_ value: Double) throws {
-		throw Error.notImplemented
+		storage = .float64(value)
 	}
 	
 	func encode(_ value: String) throws {

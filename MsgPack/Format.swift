@@ -29,6 +29,9 @@ enum Format {
 	case int16(Int16)
 	case int32(Int32)
 	case int64(Int64)
+	
+	case float32(Float)
+	case float64(Double)
 
 	func appendTo(data: inout Data) {
 		switch self {
@@ -128,6 +131,26 @@ enum Format {
 			#else
 				Format.int64(Int64(value)).appendTo(data: &data)
 			#endif
+			
+		// MARK: Floats
+		case .float32(let value):
+			var newData = Data(count: 5)
+			newData.withUnsafeMutableBytes({ (byteContainer: UnsafeMutablePointer<UInt8>) -> Void in
+				byteContainer.pointee = 0xCA
+				byteContainer.advanced(by: 1).withMemoryRebound(to: UInt32.self, capacity: 1) {
+					$0.pointee = value.bitPattern.bigEndian
+				}
+			})
+			data.append(newData)
+		case .float64(let value):
+			var newData = Data(count: 9)
+			newData.withUnsafeMutableBytes({ (byteContainer: UnsafeMutablePointer<UInt8>) -> Void in
+				byteContainer.pointee = 0xCB
+				byteContainer.advanced(by: 1).withMemoryRebound(to: UInt64.self, capacity: 1) {
+					$0.pointee = value.bitPattern.bigEndian
+				}
+			})
+			data.append(newData)
 		}
 	}
 }
