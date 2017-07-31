@@ -7,9 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		74A1AE171F2E3E8300B139A3 /* Format.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74A1AE161F2E3E8300B139A3 /* Format.swift */; };
 		74FA3B501F2C9060005CE521 /* MsgPack.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 74FA3B461F2C9060005CE521 /* MsgPack.framework */; };
 		74FA3B551F2C9060005CE521 /* MsgPackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74FA3B541F2C9060005CE521 /* MsgPackTests.swift */; };
 		74FA3B571F2C9060005CE521 /* MsgPack.h in Headers */ = {isa = PBXBuildFile; fileRef = 74FA3B491F2C9060005CE521 /* MsgPack.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		74FA3B611F2C908D005CE521 /* DecoderHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74FA3B601F2C908D005CE521 /* DecoderHelper.swift */; };
+		74FA3B631F2C9096005CE521 /* Encoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74FA3B621F2C9096005CE521 /* Encoder.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -23,12 +26,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		74A1AE161F2E3E8300B139A3 /* Format.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Format.swift; sourceTree = "<group>"; };
 		74FA3B461F2C9060005CE521 /* MsgPack.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MsgPack.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		74FA3B491F2C9060005CE521 /* MsgPack.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MsgPack.h; sourceTree = "<group>"; };
 		74FA3B4A1F2C9060005CE521 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		74FA3B4F1F2C9060005CE521 /* MsgPackTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MsgPackTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		74FA3B541F2C9060005CE521 /* MsgPackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MsgPackTests.swift; sourceTree = "<group>"; };
 		74FA3B561F2C9060005CE521 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		74FA3B601F2C908D005CE521 /* DecoderHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecoderHelper.swift; sourceTree = "<group>"; };
+		74FA3B621F2C9096005CE521 /* Encoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Encoder.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,6 +78,9 @@
 			isa = PBXGroup;
 			children = (
 				74FA3B491F2C9060005CE521 /* MsgPack.h */,
+				74FA3B601F2C908D005CE521 /* DecoderHelper.swift */,
+				74FA3B621F2C9096005CE521 /* Encoder.swift */,
+				74A1AE161F2E3E8300B139A3 /* Format.swift */,
 				74FA3B4A1F2C9060005CE521 /* Info.plist */,
 			);
 			path = MsgPack;
@@ -148,6 +157,7 @@
 				TargetAttributes = {
 					74FA3B451F2C9060005CE521 = {
 						CreatedOnToolsVersion = 9.0;
+						LastSwiftMigration = 0900;
 					};
 					74FA3B4E1F2C9060005CE521 = {
 						CreatedOnToolsVersion = 9.0;
@@ -194,6 +204,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				74FA3B631F2C9096005CE521 /* Encoder.swift in Sources */,
+				74A1AE171F2E3E8300B139A3 /* Format.swift in Sources */,
+				74FA3B611F2C908D005CE521 /* DecoderHelper.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -331,6 +344,7 @@
 		74FA3B5B1F2C9060005CE521 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				DEFINES_MODULE = YES;
@@ -339,12 +353,14 @@
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				FRAMEWORK_VERSION = A;
+				GCC_OPTIMIZATION_LEVEL = 0;
 				INFOPLIST_FILE = MsgPack/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.devian.MsgPack;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 4.0;
 			};
 			name = Debug;
@@ -352,6 +368,7 @@
 		74FA3B5C1F2C9060005CE521 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				DEFINES_MODULE = YES;
@@ -373,6 +390,7 @@
 		74FA3B5E1F2C9060005CE521 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = 7TD9A665TC;
 				INFOPLIST_FILE = MsgPackTests/Info.plist;
@@ -386,6 +404,7 @@
 		74FA3B5F1F2C9060005CE521 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = 7TD9A665TC;
 				INFOPLIST_FILE = MsgPackTests/Info.plist;
@@ -415,6 +434,7 @@
 				74FA3B5C1F2C9060005CE521 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		74FA3B5D1F2C9060005CE521 /* Build configuration list for PBXNativeTarget "MsgPackTests" */ = {
 			isa = XCConfigurationList;
@@ -423,6 +443,7 @@
 				74FA3B5F1F2C9060005CE521 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
