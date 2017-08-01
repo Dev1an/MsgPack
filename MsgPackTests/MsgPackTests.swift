@@ -10,20 +10,20 @@ import XCTest
 @testable import MsgPack
 
 class MsgPackTests: XCTestCase {
-	
-	var encoder: MsgPack.Encoder!
-	
-	override func setUp() {
-		super.setUp()
-		
-		encoder = Encoder()
-	}
-	
 	//    override func tearDown() {
 	//        // Put teardown code here. This method is called after the invocation of each test method in the class.
 	//        super.tearDown()
 	//    }
-	
+
+	var encoder: MsgPack.Encoder!
+
+	override func setUp() {
+		super.setUp()
+
+		encoder = Encoder()
+	}
+
+
 	func testEncodeTrue() {
 		do {
 			let data = try encoder.encode(true)
@@ -99,7 +99,7 @@ class MsgPackTests: XCTestCase {
 			XCTFail(error.localizedDescription)
 		}
 	}
-	
+
 	func testPerformanceOf2MilionUInt32Encodings() {
 		self.measure {
 			for _ in 0 ..< 2000000 {
@@ -107,5 +107,27 @@ class MsgPackTests: XCTestCase {
 			}
 		}
 	}
+	
+//	var encoder = MsgPack.JSONEncoder2()
+//
+//	struct Obj: Encodable {
+//		let i: Int
+//		let p: Person
+//	}
+//
+//	struct Person: Encodable {
+//		let name: String
+//		let friend: Friend
+//	}
+//
+//	struct Friend: Encodable {
+//		let count: Double
+//	}
+//
+//	func testDinges() {
+//		try! encoder.encode(
+//			Obj(i: 3, p: Person(name: "Dinges", friend: Friend(count: 8)))
+//		)
+//	}
 }
 

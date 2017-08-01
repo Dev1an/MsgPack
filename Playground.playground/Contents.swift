@@ -5,23 +5,27 @@ import Foundation
 
 let encoder = Encoder()
 
-let integerData = try encoder.encode(0x0102030405060708)
-String(integerData[0], radix: 16)
+try encoder.encode(0x0102030405060708)
 
-integerData[1]
-integerData[2]
-integerData[3]
-integerData[4]
-integerData[5]
-integerData[6]
-integerData[7]
-integerData[8]
+try encoder.encode("Hello")
 
-let doubleData = try encoder.encode("Hello there 123456789012345678901")
-String(doubleData[0], radix: 16)
+try encoder.encode("😇")
 
-String(doubleData[1], radix: 16)
-String(doubleData[2], radix: 16)
-String(doubleData[3], radix: 16)
-String(doubleData[4], radix: 16)
-String(doubleData[5], radix: 16)
+var n: Int?
+try encoder.encode(n)
+
+struct Position: Encodable {
+	let x: Int8
+	let y: Int8
+}
+
+struct Circle: Encodable {
+	let center: Position
+	let radius: UInt
+}
+
+do {
+	try encoder.encode(Circle(center: Position(x: -1, y: 2), radius: 50)).forEach { print(String($0, radix: 16)) }
+} catch {
+	error
+}
