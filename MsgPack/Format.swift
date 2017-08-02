@@ -193,7 +193,6 @@ extension Format {
 	}
 }
 
-
 extension Data {
 	mutating func write<T>(value: T, offset: Int) {
 		withUnsafeMutableBytes {(byteContainer: UnsafeMutablePointer<UInt8>) -> Void in
@@ -201,5 +200,59 @@ extension Data {
 				$0.pointee = value
 			}
 		}
+	}
+}
+
+extension Format {
+	static func from(string: String) throws -> Format {
+		guard let data = string.data(using: .utf8) else {throw MsgPackEncodingError.stringNotConvertibleToUTF8(string)}
+		switch data.count {
+		case 1..<32:
+			return .fixString(data)
+		case 32..<256:
+			return .string8(data)
+		case 256..<65536:
+			return .string16(data)
+		default:
+			return .string32(data)
+		}
+	}
+	
+	static func from(keyValuePairs: [(Format, Format)]) -> Format {
+		switch keyValuePairs.count {
+		case 1..<16:
+			return .fixMap(keyValuePairs)
+		case 16..<65536:
+			return .map16(keyValuePairs)
+		default:
+			return .map32(keyValuePairs)
+		}
+	}
+	
+	static func from(array: [Format]) -> Format {
+		switch array.count {
+		case 1..<16:
+			return .fixArray(array)
+		case 16..<65536:
+			return .array16(array)
+		default:
+			return .array32(array)
+		}
+	}
+	
+	static func from(int: Int) -> Format {
+		#if arch(arm) || arch(i386)
+			return .int32(Int32(int))
+		#else
+			return .int64(Int64(int))
+		#endif
+	}
+	
+	static func from(uInt: UInt) -> Format {
+		#if arch(arm) || arch(i386)
+			return .uInt32(UInt32(uInt))
+		#else
+			return .uInt64(UInt64(uInt))
+		#endif
 	}
 }
