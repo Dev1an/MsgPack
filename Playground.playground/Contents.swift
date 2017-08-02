@@ -1,7 +1,6 @@
 //: Playground - noun: a place where people can play
 
 import MsgPack
-import Foundation
 
 let encoder = Encoder()
 
