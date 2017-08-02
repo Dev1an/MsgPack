@@ -40,5 +40,9 @@ for byte in encodedGraph {
 
 let decoder = Decoder()
 
-let int8 = try encoder.encode(Double(-10))
-try decoder.decode(Double.self, from: int8)
+func roundtrip<T: Codable>(value: T) throws -> T {
+	return try decoder.decode(T.self, from: encoder.encode(value))
+}
+
+var x: UInt64? = nil
+try roundtrip(value: false)

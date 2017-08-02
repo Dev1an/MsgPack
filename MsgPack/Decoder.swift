@@ -135,7 +135,8 @@ struct MsgPckSingleValueDecodingContainer: SingleValueDecodingContainer {
 		guard decoder.storage[base] == FormatID.float32.rawValue else {
 			throw Error.invalidFormat(decoder.storage[base])
 		}
-		return decoder.storage.read(at: base + 1)
+		let bitPattern: UInt32 = decoder.storage.bigEndianInteger(at: base + 1)
+		return .init(bitPattern: bitPattern)
 	}
 	
 	func decode(_ type: Double.Type) throws -> Double {
