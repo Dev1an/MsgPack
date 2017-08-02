@@ -37,3 +37,8 @@ let encodedGraph = try encoder.encode(graph)
 for byte in encodedGraph {
 	print(String(byte, radix:16))
 }
+
+let decoder = Decoder()
+
+let int8 = try encoder.encode(Int8(-57))
+try decoder.decode(Int8.self, from: int8)

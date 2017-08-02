@@ -12,7 +12,7 @@
 		74FA3B501F2C9060005CE521 /* MsgPack.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 74FA3B461F2C9060005CE521 /* MsgPack.framework */; };
 		74FA3B551F2C9060005CE521 /* MsgPackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74FA3B541F2C9060005CE521 /* MsgPackTests.swift */; };
 		74FA3B571F2C9060005CE521 /* MsgPack.h in Headers */ = {isa = PBXBuildFile; fileRef = 74FA3B491F2C9060005CE521 /* MsgPack.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		74FA3B611F2C908D005CE521 /* DecoderHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74FA3B601F2C908D005CE521 /* DecoderHelper.swift */; };
+		74FA3B611F2C908D005CE521 /* Decoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74FA3B601F2C908D005CE521 /* Decoder.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,7 +34,7 @@
 		74FA3B4F1F2C9060005CE521 /* MsgPackTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MsgPackTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		74FA3B541F2C9060005CE521 /* MsgPackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MsgPackTests.swift; sourceTree = "<group>"; };
 		74FA3B561F2C9060005CE521 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		74FA3B601F2C908D005CE521 /* DecoderHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecoderHelper.swift; sourceTree = "<group>"; };
+		74FA3B601F2C908D005CE521 /* Decoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Decoder.swift; sourceTree = "<group>"; };
 		74FA3B621F2C9096005CE521 /* Encoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Encoder.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -79,7 +79,7 @@
 			isa = PBXGroup;
 			children = (
 				74FA3B491F2C9060005CE521 /* MsgPack.h */,
-				74FA3B601F2C908D005CE521 /* DecoderHelper.swift */,
+				74FA3B601F2C908D005CE521 /* Decoder.swift */,
 				74FA3B621F2C9096005CE521 /* Encoder.swift */,
 				74A1AE161F2E3E8300B139A3 /* Format.swift */,
 				74FA3B4A1F2C9060005CE521 /* Info.plist */,
@@ -208,7 +208,7 @@
 			files = (
 				7495EA251F30B393000EBDF6 /* Encoder.swift in Sources */,
 				74A1AE171F2E3E8300B139A3 /* Format.swift in Sources */,
-				74FA3B611F2C908D005CE521 /* DecoderHelper.swift in Sources */,
+				74FA3B611F2C908D005CE521 /* Decoder.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

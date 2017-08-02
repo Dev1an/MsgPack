@@ -14,7 +14,7 @@ enum Format {
 	case `nil`
 	
 	case boolean(Bool)
-	
+
 	case positiveInt7(UInt8)
 	case negativeInt5(UInt8)
 	
@@ -45,6 +45,56 @@ enum Format {
 	case map32 ([(key: Format, value: Format)])	
 }
 
+public enum FormatID: UInt8 {
+	// Do not reorder the cases because their raw values are infered based on the ordering
+	case `nil` = 0xC0
+	
+	case `false` = 0xC2
+	case `true`
+	
+	case bin8
+	case bin16
+	case bin32
+	
+	case ext8
+	case ext16
+	case ext32
+	
+	case float32
+	case float64
+
+	case positiveInt7 = 0
+	case negativeInt5 = 0b11100000
+	
+	case uInt8 = 0xCC
+	case uInt16
+	case uInt32
+	case uInt64
+	
+	case int8
+	case int16
+	case int32
+	case int64
+	
+	case fixExt1
+	case fixExt2
+	case fixExt4
+	case fixExt8
+	case fixExt16
+
+	case fixString = 0b10100000
+	case string8 = 0xD9
+	case string16
+	case string32
+	
+	case fixArray = 0b10010000
+	case array16 = 0xDC
+	case array32
+	
+	case fixMap = 0b10000000
+	case map16 = 0xDE
+	case map32
+}
 
 extension Format {
 	func appendTo(data: inout Data) {
@@ -52,89 +102,91 @@ extension Format {
 			
 		// MARK: Optional
 		case .nil:
-			data.append(0xC0)
+			data.append(FormatID.nil.rawValue)
 			
 		// MARK: Boolean
 		case .boolean(let boolean):
-			data.append(boolean ? 0xC3 : 0xC2)
+			data.append(boolean ? FormatID.true.rawValue : FormatID.false.rawValue)
 			
 		// MARK: Small integers (< 8 bit)
 		case .positiveInt7(let value):
-			data.append(value | 0b10000000)
+			data.append(value | FormatID.positiveInt7.rawValue)
 		case .negativeInt5(let value):
-			data.append(value | 0b11100000)
+			data.append(value | FormatID.negativeInt5.rawValue)
 			
 		// MARK: Unsigned integers
 		case .uInt8(let value):
-			data.append(0xCC)
-			data.append(value)
+			data.append(contentsOf: [
+				FormatID.uInt8.rawValue,
+				value
+			])
 		case .uInt16(let value):
 			var newData = Data(count: 3)
-			newData[0] = 0xCD
+			newData[0] = FormatID.uInt16.rawValue
 			newData.write(value: value.bigEndian, offset: 1)
 			data.append(newData)
 		case .uInt32(let value):
 			var newData = Data(count: 5)
-			newData[0] = 0xCE
+			newData[0] = FormatID.uInt32.rawValue
 			newData.write(value: value.bigEndian, offset: 1)
 			data.append(newData)
 		case .uInt64(let value):
 			var newData = Data(count: 9)
-			newData[0] = 0xCF
+			newData[0] = FormatID.uInt64.rawValue
 			newData.write(value: value.bigEndian, offset: 1)
 			data.append(newData)
 			
 		// MARK: Signed integers
 		case .int8(let value):
 			var newData = Data(count: 2)
-			newData[0] = 0xD0
+			newData[0] = FormatID.int8.rawValue
 			newData.write(value: value.bigEndian, offset: 1)
 			data.append(newData)
 		case .int16(let value):
 			var newData = Data(count: 3)
-			newData[0] = 0xD1
+			newData[0] = FormatID.int16.rawValue
 			newData.write(value: value.bigEndian, offset: 1)
 			data.append(newData)
 		case .int32(let value):
 			var newData = Data(count: 5)
-			newData[0] = 0xD2
+			newData[0] = FormatID.int32.rawValue
 			newData.write(value: value.bigEndian, offset: 1)
 			data.append(newData)
 		case .int64(let value):
 			var newData = Data(count: 9)
-			newData[0] = 0xD3
+			newData[0] = FormatID.int64.rawValue
 			newData.write(value: value.bigEndian, offset: 1)
 			data.append(newData)
 			
 		// MARK: Floats
 		case .float32(let value):
 			var newData = Data(count: 5)
-			newData[0] = 0xCA
+			newData[0] = FormatID.float32.rawValue
 			newData.write(value: value.bitPattern.bigEndian, offset: 1)
 			data.append(newData)
 		case .float64(let value):
 			var newData = Data(count: 9)
-			newData[0] = 0xCB
+			newData[0] = FormatID.float64.rawValue
 			newData.write(value: value.bitPattern.bigEndian, offset: 1)
 			data.append(newData)
 			
 		// MARK: Strings
 		case .fixString(let utf8Data):
 			precondition(utf8Data.count < 32, "fix strings cannot contain more than 31 bytes")
-			data.append( UInt8(utf8Data.count) | 0b10100000)
+			data.append( UInt8(utf8Data.count) | FormatID.fixString.rawValue)
 			data.append(utf8Data)
 		case .string8(let utf8Data):
-			data.append(contentsOf: [0xD9, UInt8(utf8Data.count)])
+			data.append(contentsOf: [FormatID.string8.rawValue, UInt8(utf8Data.count)])
 			data.append(utf8Data)
 		case .string16(let utf8Data):
 			var prefix = Data(count: 3)
-			prefix[0] = 0xDA
+			prefix[0] = FormatID.string16.rawValue
 			prefix.write(value: UInt16(utf8Data.count).bigEndian, offset: 1)
 			data.append(prefix)
 			data.append(utf8Data)
 		case .string32(let utf8Data):
 			var prefix = Data(count: 5)
-			prefix[0] = 0xDB
+			prefix[0] = FormatID.string32.rawValue
 			prefix.write(value: UInt32(utf8Data.count).bigEndian, offset: 1)
 			data.append(prefix)
 			data.append(utf8Data)
@@ -142,13 +194,13 @@ extension Format {
 		// MARK: Arrays
 		case .fixArray(let array):
 			precondition(array.count < 16, "fix arrays cannot contain more than 15 elements")
-			data.append( UInt8(array.count) | 0b10010000)
+			data.append( UInt8(array.count) | FormatID.fixArray.rawValue)
 			for element in array {
 				element.appendTo(data: &data)
 			}
 		case .array16(let array):
 			var prefix = Data(count: 3)
-			prefix[0] = 0xDC
+			prefix[0] = FormatID.array16.rawValue
 			prefix.write(value: UInt16(array.count).bigEndian, offset: 1)
 			data.append(prefix)
 			for element in array {
@@ -156,7 +208,7 @@ extension Format {
 			}
 		case .array32(let array):
 			var prefix = Data(count: 5)
-			prefix[0] = 0xDD
+			prefix[0] = FormatID.array32.rawValue
 			prefix.write(value: UInt32(array.count).bigEndian, offset: 1)
 			data.append(prefix)
 			for element in array {
@@ -166,14 +218,14 @@ extension Format {
 		// MARK: Maps
 		case .fixMap(let pairs):
 			precondition(pairs.count < 16, "fix maps cannot contain more than 15 key-value pairs")
-			data.append( UInt8(pairs.count) | 0b10000000)
+			data.append( UInt8(pairs.count) | FormatID.fixMap.rawValue)
 			for (key, value) in pairs {
 				key.appendTo(data: &data)
 				value.appendTo(data: &data)
 			}
 		case .map16(let pairs):
 			var prefix = Data(count: 3)
-			prefix[0] = 0xDE
+			prefix[0] = FormatID.map16.rawValue
 			prefix.write(value: UInt16(pairs.count).bigEndian, offset: 1)
 			data.append(prefix)
 			for (key, value) in pairs {
@@ -182,7 +234,7 @@ extension Format {
 			}
 		case .map32(let pairs):
 			var prefix = Data(count: 5)
-			prefix[0] = 0xDE
+			prefix[0] = FormatID.map32.rawValue
 			prefix.write(value: UInt32(pairs.count).bigEndian, offset: 1)
 			data.append(prefix)
 			for (key, value) in pairs {
@@ -201,8 +253,21 @@ extension Data {
 			}
 		}
 	}
+	
+	func read<T>(at offset: Int) -> T {
+		return withUnsafeBytes {(byteContainer: UnsafePointer<UInt8>) -> T in
+			byteContainer.advanced(by: offset).withMemoryRebound(to: T.self, capacity: 1) {$0.pointee}
+		}
+	}
+	
+	func bigEndianInteger<T: FixedWidthInteger>(at offset: Int) -> T {
+		return withUnsafeBytes {(byteContainer: UnsafePointer<UInt8>) -> T in
+			byteContainer.advanced(by: offset).withMemoryRebound(to: T.self, capacity: 1) {T.init(bigEndian: $0.pointee)}
+		}
+	}	
 }
 
+// MARK: encoding helpers
 extension Format {
 	static func from(string: String) throws -> Format {
 		guard let data = string.data(using: .utf8) else {throw MsgPackEncodingError.stringNotConvertibleToUTF8(string)}
