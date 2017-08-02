@@ -22,7 +22,7 @@ public class Encoder {
 }
 
 enum MsgPackEncodingError: Swift.Error {
-	case notImplemented, stringNotConvertibleToUTF8(String), valueDidNotAskForContainer
+	case stringNotConvertibleToUTF8(String), valueDidNotAskForContainer
 }
 
 class IntermediateEncoder: Swift.Encoder {
@@ -159,7 +159,7 @@ class MsgPackSingleValueEncodingContainer: MessagePackEncodingContainer, SingleV
 	}
 
 	func encode<T : Encodable>(_ value: T) throws {
-		throw MsgPackEncodingError.notImplemented
+		fatalError("Not implemented")
 	}
 }
 
@@ -262,7 +262,7 @@ class MsgPackKeyedEncodingContainer<K: CodingKey>: MessagePackEncodingContainer,
 	}
 	
 	func superEncoder(forKey key: K) -> Swift.Encoder {
-		preconditionFailure("not implemented")
+		fatalError("not implemented")
 	}
 }
 

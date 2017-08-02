@@ -44,5 +44,4 @@ func roundtrip<T: Codable>(value: T) throws -> T {
 	return try decoder.decode(T.self, from: encoder.encode(value))
 }
 
-var x: UInt64? = nil
-try roundtrip(value: false)
+try roundtrip(value: "Hello")

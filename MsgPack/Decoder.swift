@@ -148,10 +148,103 @@ struct MsgPckSingleValueDecodingContainer: SingleValueDecodingContainer {
 	}
 	
 	func decode(_ type: String.Type) throws -> String {
-		fatalError("not implemented")
+		return try Format.string(from: &decoder.storage)
 	}
 	
 	func decode<T>(_ type: T.Type) throws -> T where T : Decodable {
 		fatalError("not implemented")
 	}
+}
+
+struct MsgPckKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtocol {
+	var codingPath: [CodingKey]
+	
+	var allKeys: [K]
+	
+	func contains(_ key: K) -> Bool {
+		fatalError("not implemented")
+	}
+	
+	func decodeNil(forKey key: K) throws -> Bool {
+		fatalError("not implemented")
+	}
+	
+	func decode(_ type: Bool.Type, forKey key: K) throws -> Bool {
+		fatalError("not implemented")
+	}
+	
+	func decode(_ type: Int.Type, forKey key: K) throws -> Int {
+		fatalError("not implemented")
+	}
+	
+	func decode(_ type: Int8.Type, forKey key: K) throws -> Int8 {
+		fatalError("not implemented")
+	}
+	
+	func decode(_ type: Int16.Type, forKey key: K) throws -> Int16 {
+		fatalError("not implemented")
+	}
+	
+	func decode(_ type: Int32.Type, forKey key: K) throws -> Int32 {
+		fatalError("not implemented")
+	}
+	
+	func decode(_ type: Int64.Type, forKey key: K) throws -> Int64 {
+		fatalError("not implemented")
+	}
+	
+	func decode(_ type: UInt.Type, forKey key: K) throws -> UInt {
+		fatalError("not implemented")
+	}
+	
+	func decode(_ type: UInt8.Type, forKey key: K) throws -> UInt8 {
+		fatalError("not implemented")
+	}
+	
+	func decode(_ type: UInt16.Type, forKey key: K) throws -> UInt16 {
+		fatalError("not implemented")
+	}
+	
+	func decode(_ type: UInt32.Type, forKey key: K) throws -> UInt32 {
+		fatalError("not implemented")
+	}
+	
+	func decode(_ type: UInt64.Type, forKey key: K) throws -> UInt64 {
+		fatalError("not implemented")
+	}
+	
+	func decode(_ type: Float.Type, forKey key: K) throws -> Float {
+		fatalError("not implemented")
+	}
+	
+	func decode(_ type: Double.Type, forKey key: K) throws -> Double {
+		fatalError("not implemented")
+	}
+	
+	func decode(_ type: String.Type, forKey key: K) throws -> String {
+		fatalError("not implemented")
+	}
+	
+	func decode<T>(_ type: T.Type, forKey key: K) throws -> T where T : Decodable {
+		fatalError("not implemented")
+	}
+	
+	func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: K) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey {
+		fatalError("not implemented")
+	}
+	
+	func nestedUnkeyedContainer(forKey key: K) throws -> UnkeyedDecodingContainer {
+		fatalError("not implemented")
+	}
+	
+	func superDecoder() throws -> Swift.Decoder {
+		fatalError("not implemented")
+	}
+	
+	func superDecoder(forKey key: K) throws -> Swift.Decoder {
+		fatalError("not implemented")
+	}
+	
+	typealias Key = K
+	
 }
