@@ -97,7 +97,7 @@ class MessagePackEncodingContainer {
 }
 
 enum MsgPackEncodingError: Swift.Error {
-	case notImplemented, stringNotConvertibleToUTF8(String)
+	case notImplemented, stringNotConvertibleToUTF8(String), valueDidNotAskForContainer
 }
 
 class MsgPackSingleValueEncodingContainer: MessagePackEncodingContainer, SingleValueEncodingContainer {
@@ -186,6 +186,7 @@ class MsgPackKeyedEncodingContainer<K: CodingKey>: MessagePackEncodingContainer,
 	var userInfo = [CodingUserInfoKey : Any]()
 
 	var storage = [String: MessagePackEncodingContainer]()
+	var temporaryContainer: MessagePackEncodingContainer?
 	
 	override func getFormat() throws -> Format {
 		return try Format.from(keyValuePairs: storage.map {
@@ -254,7 +255,11 @@ class MsgPackKeyedEncodingContainer<K: CodingKey>: MessagePackEncodingContainer,
 	}
 	
 	func encode<T>(_ value: T, forKey key: K) throws where T : Encodable {
-		throw MsgPackEncodingError.notImplemented
+		try value.encode(to: self)
+		guard let container = temporaryContainer else {
+			throw MsgPackEncodingError.valueDidNotAskForContainer
+		}
+		storage[key.stringValue] = container
 	}
 	
 	func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type, forKey key: K) -> KeyedEncodingContainer<NestedKey> where NestedKey : CodingKey {
@@ -273,5 +278,23 @@ class MsgPackKeyedEncodingContainer<K: CodingKey>: MessagePackEncodingContainer,
 	
 	func superEncoder(forKey key: K) -> Swift.Encoder {
 		preconditionFailure("not implemented")
+	}
+}
+
+extension MsgPackKeyedEncodingContainer: Swift.Encoder {
+	func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> where Key : CodingKey {
+		let keyedContainer = MsgPackKeyedEncodingContainer<Key>()
+		temporaryContainer = keyedContainer
+		return KeyedEncodingContainer(keyedContainer)
+	}
+	
+	func unkeyedContainer() -> UnkeyedEncodingContainer {
+		preconditionFailure()
+	}
+	
+	func singleValueContainer() -> SingleValueEncodingContainer {
+		let singleValueContainer = MsgPackSingleValueEncodingContainer()
+		temporaryContainer = singleValueContainer
+		return singleValueContainer
 	}
 }

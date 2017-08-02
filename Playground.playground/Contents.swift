@@ -24,8 +24,4 @@ struct Circle: Encodable {
 	let radius: UInt
 }
 
-do {
-	try encoder.encode(Circle(center: Position(x: -1, y: 2), radius: 50)).forEach { print(String($0, radix: 16)) }
-} catch {
-	error
-}
+try encoder.encode(Circle(center: Position(x: -1, y: 2), radius: 67))
