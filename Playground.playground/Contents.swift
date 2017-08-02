@@ -40,5 +40,5 @@ for byte in encodedGraph {
 
 let decoder = Decoder()
 
-let int8 = try encoder.encode(Int8(-57))
-try decoder.decode(Int8.self, from: int8)
+let int8 = try encoder.encode(Double(-10))
+try decoder.decode(Double.self, from: int8)
