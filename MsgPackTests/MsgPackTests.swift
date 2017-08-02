@@ -108,26 +108,12 @@ class MsgPackTests: XCTestCase {
 		}
 	}
 	
-//	var encoder = MsgPack.JSONEncoder2()
-//
-//	struct Obj: Encodable {
-//		let i: Int
-//		let p: Person
-//	}
-//
-//	struct Person: Encodable {
-//		let name: String
-//		let friend: Friend
-//	}
-//
-//	struct Friend: Encodable {
-//		let count: Double
-//	}
-//
-//	func testDinges() {
-//		try! encoder.encode(
-//			Obj(i: 3, p: Person(name: "Dinges", friend: Friend(count: 8)))
-//		)
-//	}
+	func testExample() {
+		do {
+			print(try encoder.encode([[Int8(-3)], [5], [8]]))
+		} catch {
+			print(error)
+		}
+	}
 }
 
