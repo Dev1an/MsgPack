@@ -101,6 +101,62 @@ public enum FormatID: UInt8 {
 	static let fixMapRange = FormatID.fixMap.rawValue ..< FormatID.fixArray.rawValue
 	static let fixArrayRange = FormatID.fixArray.rawValue ..< FormatID.fixString.rawValue
 	static let fixStringRange = FormatID.fixString.rawValue ..< FormatID.nil.rawValue
+	
+	var length: Int {
+		switch self {
+		
+		case .nil:
+			return 0
+		case .false:
+			return 0
+		case .true:
+			return 0
+		case .float32:
+			return 1
+		case .float64:
+			return 1
+		case .positiveInt7:
+			return 0
+		case .negativeInt5:
+			return 0
+		case .uInt8:
+			return 1
+		case .uInt16:
+			return 1
+		case .uInt32:
+			return 1
+		case .uInt64:
+			return 1
+		case .int8:
+			return 1
+		case .int16:
+			return 1
+		case .int32:
+			return 1
+		case .int64:
+			return 1
+		case .fixString:
+			return 1
+		case .string8:
+			return 2
+		case .string16:
+			return 3
+		case .string32:
+			return 5
+		case .fixArray:
+			return 1
+		case .array16:
+			return 3
+		case .array32:
+			return 5
+		case .fixMap:
+			return 1
+		case .map16:
+			return 3
+		case .map32:
+			return 5
+		}
+	}
 }
 
 extension Format {

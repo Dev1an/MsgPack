@@ -266,10 +266,9 @@ class MsgPackKeyedEncodingContainer<K: CodingKey>: MessagePackEncodingContainer,
 	}
 }
 
-class KeyedStorageContainer {
-	var storage: [String: MessagePackEncodingContainer]
-	init(storage: [String:MessagePackEncodingContainer] = [:]) {
-		self.storage = storage
+class KeyedStorageContainer: Reference<[String: MessagePackEncodingContainer]> {
+	init() {
+		super.init(to: [:])
 	}
 }
 

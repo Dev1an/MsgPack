@@ -17,12 +17,20 @@ public class Decoder {
 	public init() {}
 }
 
-typealias PartiallyDecodedDictionary = [String:PartiallyDecodedValue]
+class PartiallyDecodedDictionary: Reference<[String:PartiallyDecodedValue]> {
+	let pointer: Int
+	var byteCount = 0
+	init(pointer: Int) {
+		self.pointer = pointer
+		super.init(to: [:])
+	}
+}
+
 enum PartiallyDecodedValue {
 	case constant(FormatID)
 	case fixedWidth(FormatID, pointer: Int)
 	case variableWidth(FormatID, pointer: Int, length: Int)
-	case array([PartiallyDecodedValue])
+	case array([PartiallyDecodedValue], pointer: Int, byteCount: Int)
 	case dictionary(PartiallyDecodedDictionary)
 }
 
@@ -32,16 +40,27 @@ class IntermediateDecoder: Swift.Decoder {
 	var userInfo = [CodingUserInfoKey : Any]()
 	
 	var storage: Data
-	var offset = 0
 
-	var dictionary = PartiallyDecodedDictionary()
+	let dictionary: PartiallyDecodedDictionary
 	
 	init(with data: Data) {
 		storage = data
+		dictionary = PartiallyDecodedDictionary(pointer: 0)
 	}
 	
+	init(withUnsafeDataFrom otherDecoder: IntermediateDecoder, start: Int, length: Int) {
+		storage = otherDecoder.storage.withUnsafeMutableBytes {
+			Data(bytesNoCopy: $0.advanced(by: start), count: length, deallocator: .none)
+		}
+		dictionary = otherDecoder.dictionary
+	}
+	
+	convenience init(withUnsafeDataFrom otherDecoder: IntermediateDecoder, start: Int) {
+		self.init(withUnsafeDataFrom: otherDecoder, start: start, length: otherDecoder.storage.count - start)
+	}
+
 	func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> where Key : CodingKey {
-		return KeyedDecodingContainer(try MsgPckKeyedDecodingContainer<Key>(referringTo: self, at: offset, with: []))
+		return KeyedDecodingContainer(try MsgPckKeyedDecodingContainer<Key>(referringTo: self, with: codingPath))
 	}
 	
 	func unkeyedContainer() throws -> UnkeyedDecodingContainer {
@@ -50,12 +69,12 @@ class IntermediateDecoder: Swift.Decoder {
 	
 	func singleValueContainer() throws -> SingleValueDecodingContainer {
 		return MsgPckSingleValueDecodingContainer(decoder: self, base: 0, codingPath: [])
-	}
+	}	
 }
 
 struct MsgPckSingleValueDecodingContainer: SingleValueDecodingContainer {
 	let decoder: IntermediateDecoder
-	var base: Int
+	let base: Int
 
 	var codingPath: [CodingKey]
 
@@ -165,42 +184,63 @@ struct MsgPckSingleValueDecodingContainer: SingleValueDecodingContainer {
 	}
 }
 
+struct TemporaryCodingKey: CodingKey {
+	let stringValue: String
+	let intValue: Int? = nil
+
+	init?(stringValue: String) {
+		self.stringValue = stringValue
+	}
+	
+	init?(intValue: Int) {
+		return nil
+	}
+}
+
 struct MsgPckKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtocol {
 	var codingPath: [CodingKey]
 	
+	let relativeDictionary: PartiallyDecodedDictionary
+	
 	let decoder: IntermediateDecoder
-	var base = 0
 
 	var allKeys = [K]()
 	
-	init(referringTo decoder: IntermediateDecoder, at base: Int, with codingPath: [CodingKey]) throws {
+	init(referringTo decoder: IntermediateDecoder, with codingPath: [CodingKey]) throws {
 		self.codingPath = codingPath
 		self.decoder = decoder
-		self.base = base
-		
-		if decoder.dictionary.count == 0 {
+
+		var link = decoder.dictionary
+		for x in codingPath {
+			guard case let .dictionary(newLink) = link.storage[x.stringValue]! else {fatalError()}
+			link = newLink
+		}
+		relativeDictionary = link
+		var cursor = relativeDictionary.pointer
+
+		if relativeDictionary.storage.count == 0 {
 			let elementCount: Int
-			switch decoder.storage[base] {
+			switch decoder.storage[cursor] {
 			case FormatID.fixMapRange:
-				elementCount = Int(decoder.storage[base] - FormatID.fixMap.rawValue)
-				self.base += 1
+				elementCount = Int(decoder.storage[cursor] - FormatID.fixMap.rawValue)
+				cursor += 1
 			case FormatID.map16.rawValue:
-				elementCount = Int(decoder.storage.bigEndianInteger(at: base+1) as UInt16)
-				self.base += 3
+				elementCount = Int(decoder.storage.bigEndianInteger(at: cursor+1) as UInt16)
+				cursor += 3
 			case FormatID.map32.rawValue:
-				elementCount = Int(decoder.storage.bigEndianInteger(at: base+1) as UInt32)
-				self.base += 5
+				elementCount = Int(decoder.storage.bigEndianInteger(at: cursor+1) as UInt32)
+				cursor += 5
 			default:
-				throw DecodingError.typeMismatch(Dictionary<String,Any>.self, .init(codingPath: codingPath, debugDescription: "Expected a MsgPack map format, but found 0x\(String(decoder.storage[base], radix: 16))"))
+				throw DecodingError.typeMismatch(Dictionary<String,Any>.self, .init(codingPath: codingPath, debugDescription: "Expected a MsgPack map format, but found 0x\(String(decoder.storage[cursor], radix: 16))"))
 			}
-			for cursor in 0 ..< elementCount {
-				let key = try Format.string(from: &decoder.storage, base: &self.base)
+			for _ in 0 ..< elementCount {
+				let key = try Format.string(from: &decoder.storage, base: &cursor)
 				
 				let valueFormat: FormatID
-				if let valueFormatLookup = FormatID(rawValue: decoder.storage[self.base]) {
+				if let valueFormatLookup = FormatID(rawValue: decoder.storage[cursor]) {
 					valueFormat = valueFormatLookup
 				} else {
-					switch decoder.storage[self.base] {
+					switch decoder.storage[cursor] {
 					case FormatID.fixMapRange:
 						valueFormat = .fixMap
 					case FormatID.fixStringRange:
@@ -210,55 +250,65 @@ struct MsgPckKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtoco
 					case FormatID.negativeInt5Range:
 						valueFormat = .negativeInt5
 					default:
-						throw DecodingError.dataCorrupted(.init(codingPath: codingPath, debugDescription: "Unknown format: 0x\(String(decoder.storage[self.base], radix: 16))"))
+						throw DecodingError.dataCorrupted(.init(codingPath: codingPath, debugDescription: "Unknown format: 0x\(String(decoder.storage[cursor], radix: 16))"))
 					}
 				}
 				
 				switch valueFormat {
 				case .nil, .false, .true:
-					decoder.dictionary[key] = .constant(valueFormat)
-					self.base += 1
+					relativeDictionary.storage[key] = .constant(valueFormat)
+					cursor += 1
 				case .positiveInt7, .negativeInt5:
-					decoder.dictionary[key] = .fixedWidth(valueFormat, pointer: self.base)
-					self.base += 1
+					relativeDictionary.storage[key] = .fixedWidth(valueFormat, pointer: cursor)
+					cursor += 1
 				case .uInt8, .int8, .string8:
-					decoder.dictionary[key] = .fixedWidth(valueFormat, pointer: self.base + 1)
-					self.base += 2
+					relativeDictionary.storage[key] = .fixedWidth(valueFormat, pointer: cursor + 1)
+					cursor += 2
 				case .uInt16, .int16:
-					decoder.dictionary[key] = .fixedWidth(valueFormat, pointer: self.base + 1)
-					self.base += 3
+					relativeDictionary.storage[key] = .fixedWidth(valueFormat, pointer: cursor + 1)
+					cursor += 3
 				case .uInt32, .int32, .float32:
-					decoder.dictionary[key] = .fixedWidth(valueFormat, pointer: self.base + 1)
-					self.base += 5
+					relativeDictionary.storage[key] = .fixedWidth(valueFormat, pointer: cursor + 1)
+					cursor += 5
 				case .uInt64, .int64, .float64:
-					decoder.dictionary[key] = .fixedWidth(valueFormat, pointer: self.base + 1)
-					self.base += 9
-				case .fixArray, .fixMap, .fixString:
-					let length = Int(decoder.storage[self.base] - valueFormat.rawValue)
-					self.base += 1
-					decoder.dictionary[key] = .variableWidth(valueFormat, pointer: self.base, length: length)
-					self.base += length
-				case .array16, .map16, .string16:
-					let length = Int(decoder.storage.bigEndianInteger(at: self.base + 1) as UInt16)
-					self.base += 3
-					decoder.dictionary[key] = .variableWidth(valueFormat, pointer: self.base, length: length)
-					self.base += length
-				case .string32, .array32, .map32:
-					let length = Int(decoder.storage.bigEndianInteger(at: self.base + 1) as UInt16)
-					self.base += 5
-					decoder.dictionary[key] = .variableWidth(valueFormat, pointer: self.base, length: length)
-					self.base += length
+					relativeDictionary.storage[key] = .fixedWidth(valueFormat, pointer: cursor + 1)
+					cursor += 9
+				case .fixString:
+					let length = Int(decoder.storage[cursor] - valueFormat.rawValue)
+					cursor += 1
+					relativeDictionary.storage[key] = .variableWidth(valueFormat, pointer: cursor, length: length)
+					cursor += length
+				case .string16:
+					let length = Int(decoder.storage.bigEndianInteger(at: cursor + 1) as UInt16)
+					cursor += 3
+					relativeDictionary.storage[key] = .variableWidth(valueFormat, pointer: cursor, length: length)
+					cursor += length
+				case .string32:
+					let length = Int(decoder.storage.bigEndianInteger(at: cursor + 1) as UInt16)
+					cursor += 5
+					relativeDictionary.storage[key] = .variableWidth(valueFormat, pointer: cursor, length: length)
+					cursor += length
+				case .fixArray, .array16, .array32:
+					let length = Int(decoder.storage[cursor] - valueFormat.rawValue)
+					cursor += 1
+					fatalError("not implemented")
+				case .fixMap, .map16, .map32:
+					let partial = PartiallyDecodedDictionary(pointer: cursor)
+					relativeDictionary.storage[key] = .dictionary(partial)
+					try MsgPckKeyedDecodingContainer(referringTo: decoder, with: codingPath + [TemporaryCodingKey(stringValue: key)!])
+					cursor += partial.byteCount
 				}
 			}
 		}
+		relativeDictionary.byteCount = cursor - relativeDictionary.pointer
 	}
 	
 	func contains(_ key: K) -> Bool {
-		return decoder.dictionary[key.stringValue] != nil
+		return relativeDictionary.storage[key.stringValue] != nil
 	}
 	
 	func decodeNil(forKey key: K) throws -> Bool {
-		switch decoder.dictionary[key.stringValue]! {
+		switch relativeDictionary.storage[key.stringValue]! {
 		case .constant(let format):
 			return format == .nil
 		default:
@@ -267,8 +317,8 @@ struct MsgPckKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtoco
 	}
 	
 	func decode(_ type: Bool.Type, forKey key: K) throws -> Bool {
-		guard let value = decoder.dictionary[key.stringValue] else {
-			throw DecodingError.keyNotFound(key, .init(codingPath: codingPath, debugDescription: "Key not found"))
+		guard let value = relativeDictionary.storage[key.stringValue] else {
+			throw DecodingError.keyNotFound(key, .init(codingPath: codingPath, debugDescription: "Key not found: \(key.stringValue)"))
 		}
 		guard case let .constant(format) = value else {
 			throw DecodingError.typeMismatch(type, .init(codingPath: codingPath, debugDescription: "Expected bool but found \(value)"))
@@ -282,8 +332,8 @@ struct MsgPckKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtoco
 	}
 	
 	func formattedPointer<T>(for key: K, format expectedFormat: FormatID, type: T.Type) throws -> Int {
-		guard let value = decoder.dictionary[key.stringValue] else {
-			throw DecodingError.keyNotFound(key, .init(codingPath: codingPath, debugDescription: "Key not found"))
+		guard let value = relativeDictionary.storage[key.stringValue] else {
+			throw DecodingError.keyNotFound(key, .init(codingPath: codingPath, debugDescription: "Key not found: \(key.stringValue)"))
 		}
 		guard case let .fixedWidth(format, pointer) = value else {
 			throw DecodingError.dataCorruptedError(forKey: key, in: self, debugDescription: "Expected fixed width value but found \(value)")
@@ -345,11 +395,11 @@ struct MsgPckKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtoco
 	}
 	
 	func decode(_ type: String.Type, forKey key: K) throws -> String {
-		guard let value = decoder.dictionary[key.stringValue] else {
-			throw DecodingError.keyNotFound(key, .init(codingPath: codingPath, debugDescription: "Key not found"))
+		guard let value = relativeDictionary.storage[key.stringValue] else {
+			throw DecodingError.keyNotFound(key, .init(codingPath: codingPath, debugDescription: "Key not found: \(key.stringValue)"))
 		}
 		guard case let .variableWidth(format, base, length) = value else {
-			throw DecodingError.dataCorruptedError(forKey: key, in: self, debugDescription: "Expected fixed width value but found \(value)")
+			throw DecodingError.dataCorruptedError(forKey: key, in: self, debugDescription: "Expected variable width value but found \(value)")
 		}
 		guard [.string8, .string16, .string32, .fixString].contains(format) else {
 			throw DecodingError.typeMismatch(type, .init(codingPath: codingPath, debugDescription: "Expected a string but found \(format)"))
@@ -363,7 +413,25 @@ struct MsgPckKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtoco
 	}
 	
 	func decode<T>(_ type: T.Type, forKey key: K) throws -> T where T : Decodable {
-		fatalError("not implemented")
+		guard let value = relativeDictionary.storage[key.stringValue] else {
+			throw DecodingError.keyNotFound(key, .init(codingPath: codingPath, debugDescription: "Key not found: \(key.stringValue)"))
+		}
+		let sliceDecoder: IntermediateDecoder
+		switch value {
+		
+		case .constant(let format):
+			sliceDecoder = IntermediateDecoder(with: Data([format.rawValue]))
+		case let .fixedWidth(format, pointer):
+			sliceDecoder = IntermediateDecoder(withUnsafeDataFrom: decoder, start: pointer - format.length)
+		case let .variableWidth(format, pointer, length):
+			sliceDecoder = IntermediateDecoder(withUnsafeDataFrom: decoder, start: pointer - format.length, length: length + format.length)
+		case .array(_):
+			fatalError("not implemented")
+		case let .dictionary(reference):
+			sliceDecoder = IntermediateDecoder(withUnsafeDataFrom: decoder, start: reference.pointer, length: reference.byteCount)
+		}
+		sliceDecoder.codingPath = codingPath + [key]
+		return try T(from: sliceDecoder)
 	}
 	
 	func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: K) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey {
