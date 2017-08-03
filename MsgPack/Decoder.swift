@@ -42,6 +42,7 @@ class IntermediateDecoder: Swift.Decoder {
 	var storage: Data
 
 	let dictionary: PartiallyDecodedDictionary
+	var cursor = 0
 	
 	init(with data: Data) {
 		storage = data
@@ -211,14 +212,22 @@ struct MsgPckKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtoco
 		self.decoder = decoder
 
 		var link = decoder.dictionary
-		for x in codingPath {
+		for x in codingPath.dropLast() {
 			guard case let .dictionary(newLink) = link.storage[x.stringValue]! else {fatalError()}
 			link = newLink
 		}
-		relativeDictionary = link
-		var cursor = relativeDictionary.pointer
+		if let lastCodingKey = codingPath.last, let lastReference = link.storage[lastCodingKey.stringValue] {
+			guard case .dictionary(let newLink) = lastReference else {fatalError()}
+			relativeDictionary = newLink
+		} else {
+			var cursor = decoder.cursor
+			if let lastCodingKey = codingPath.last {
+				relativeDictionary = PartiallyDecodedDictionary(pointer: cursor)
+				link.storage[lastCodingKey.stringValue] = .dictionary(relativeDictionary)
+			} else {
+				relativeDictionary = link
+			}
 
-		if relativeDictionary.storage.count == 0 {
 			let elementCount: Int
 			switch decoder.storage[cursor] {
 			case FormatID.fixMapRange:
@@ -235,7 +244,6 @@ struct MsgPckKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtoco
 			}
 			for _ in 0 ..< elementCount {
 				let key = try Format.string(from: &decoder.storage, base: &cursor)
-				
 				let valueFormat: FormatID
 				if let valueFormatLookup = FormatID(rawValue: decoder.storage[cursor]) {
 					valueFormat = valueFormatLookup
@@ -289,18 +297,15 @@ struct MsgPckKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtoco
 					relativeDictionary.storage[key] = .variableWidth(valueFormat, pointer: cursor, length: length)
 					cursor += length
 				case .fixArray, .array16, .array32:
-					let length = Int(decoder.storage[cursor] - valueFormat.rawValue)
-					cursor += 1
 					fatalError("not implemented")
 				case .fixMap, .map16, .map32:
-					let partial = PartiallyDecodedDictionary(pointer: cursor)
-					relativeDictionary.storage[key] = .dictionary(partial)
-					try MsgPckKeyedDecodingContainer(referringTo: decoder, with: codingPath + [TemporaryCodingKey(stringValue: key)!])
-					cursor += partial.byteCount
+					decoder.cursor = cursor
+					let container = try MsgPckKeyedDecodingContainer<TemporaryCodingKey>(referringTo: decoder, with: codingPath + [TemporaryCodingKey(stringValue: key)!])
+					cursor += container.relativeDictionary.byteCount
 				}
 			}
+			relativeDictionary.byteCount = cursor - relativeDictionary.pointer
 		}
-		relativeDictionary.byteCount = cursor - relativeDictionary.pointer
 	}
 	
 	func contains(_ key: K) -> Bool {
@@ -413,12 +418,29 @@ struct MsgPckKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtoco
 	}
 	
 	func decode<T>(_ type: T.Type, forKey key: K) throws -> T where T : Decodable {
+		let sliceDecoder = try superDecoder(forKey: key)
+		return try T(from: sliceDecoder)
+	}
+	
+	func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: K) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey {
+		return KeyedDecodingContainer(try MsgPckKeyedDecodingContainer<NestedKey>(referringTo: decoder, with: codingPath + [key]))
+	}
+	
+	func nestedUnkeyedContainer(forKey key: K) throws -> UnkeyedDecodingContainer {
+		fatalError("not implemented")
+	}
+	
+	func superDecoder() throws -> Swift.Decoder {
+		return decoder
+	}
+	
+	func superDecoder(forKey key: K) throws -> Swift.Decoder {
 		guard let value = relativeDictionary.storage[key.stringValue] else {
 			throw DecodingError.keyNotFound(key, .init(codingPath: codingPath, debugDescription: "Key not found: \(key.stringValue)"))
 		}
 		let sliceDecoder: IntermediateDecoder
 		switch value {
-		
+			
 		case .constant(let format):
 			sliceDecoder = IntermediateDecoder(with: Data([format.rawValue]))
 		case let .fixedWidth(format, pointer):
@@ -431,23 +453,7 @@ struct MsgPckKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtoco
 			sliceDecoder = IntermediateDecoder(withUnsafeDataFrom: decoder, start: reference.pointer, length: reference.byteCount)
 		}
 		sliceDecoder.codingPath = codingPath + [key]
-		return try T(from: sliceDecoder)
-	}
-	
-	func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: K) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey {
-		fatalError("not implemented")
-	}
-	
-	func nestedUnkeyedContainer(forKey key: K) throws -> UnkeyedDecodingContainer {
-		fatalError("not implemented")
-	}
-	
-	func superDecoder() throws -> Swift.Decoder {
-		fatalError("not implemented")
-	}
-	
-	func superDecoder(forKey key: K) throws -> Swift.Decoder {
-		fatalError("not implemented")
+		return sliceDecoder
 	}
 	
 	typealias Key = K
