@@ -47,9 +47,9 @@ struct Simple: Codable {
 	let c: Bool?
 	let d: Bool?
 	let e: Bool?
-	let f: Double
+	let f: String
 }
 
 try roundtrip(value: -56.4)
 try roundtrip(value: "Hello world 😎")
-try roundtrip(value: Simple(a: true, b: false, c: true, d: false, e: nil, f: 8.3))
+try roundtrip(value: Simple(a: true, b: false, c: true, d: false, e: nil, f: "😜"))

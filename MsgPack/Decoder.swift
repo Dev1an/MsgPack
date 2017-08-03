@@ -345,7 +345,21 @@ struct MsgPckKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtoco
 	}
 	
 	func decode(_ type: String.Type, forKey key: K) throws -> String {
-		fatalError("not implemented")
+		guard let value = decoder.dictionary[key.stringValue] else {
+			throw DecodingError.keyNotFound(key, .init(codingPath: codingPath, debugDescription: "Key not found"))
+		}
+		guard case let .variableWidth(format, base, length) = value else {
+			throw DecodingError.dataCorruptedError(forKey: key, in: self, debugDescription: "Expected fixed width value but found \(value)")
+		}
+		guard [.string8, .string16, .string32, .fixString].contains(format) else {
+			throw DecodingError.typeMismatch(type, .init(codingPath: codingPath, debugDescription: "Expected a string but found \(format)"))
+		}
+		guard let string = decoder.storage.withUnsafeMutableBytes({
+			String(bytesNoCopy: $0.advanced(by: base), length: length, encoding: .utf8, freeWhenDone: false)
+		}) else {
+			throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "not a valid string"))
+		}
+		return string
 	}
 	
 	func decode<T>(_ type: T.Type, forKey key: K) throws -> T where T : Decodable {
