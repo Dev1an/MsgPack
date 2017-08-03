@@ -251,6 +251,8 @@ struct MsgPckKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtoco
 					switch decoder.storage[cursor] {
 					case FormatID.fixMapRange:
 						valueFormat = .fixMap
+					case FormatID.fixArrayRange:
+						fatalError("array decoding not implemented")
 					case FormatID.fixStringRange:
 						valueFormat = .fixString
 					case FormatID.positiveInt7Range:
