@@ -146,7 +146,8 @@ struct MsgPckSingleValueDecodingContainer: SingleValueDecodingContainer {
 		return .init(bitPattern: bitPattern)
 	}
 	
-	mutating func decode(_ type: String.Type) throws -> String {
+	func decode(_ type: String.Type) throws -> String {
+		var base = self.base
 		return try Format.string(from: &decoder.storage, base: &base)
 	}
 	

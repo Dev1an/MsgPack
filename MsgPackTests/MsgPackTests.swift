@@ -121,7 +121,7 @@ class MsgPackTests: XCTestCase {
 
 	func testExample() {
 		do {
-			print("roundtrip:", try roundtrip(value: Simple(a: false, b: false)))
+			print("roundtrip:", try roundtrip(value: "Simple 🎁"))
 		} catch {
 			print(error)
 		}

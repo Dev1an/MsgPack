@@ -50,4 +50,5 @@ struct Simple: Codable {
 }
 
 try roundtrip(value: -56.4)
+try roundtrip(value: "Hello world 😎")
 try roundtrip(value: Simple(a: true, b: false, c: true, d: false, e: nil))
