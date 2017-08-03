@@ -113,6 +113,10 @@ class MsgPackTests: XCTestCase {
 	struct Simple: Codable {
 		let a: Bool
 		let b: Bool
+		let c: Bool?
+		let d: Bool?
+		let e: Bool?
+		let f: Int8
 	}
 
 	func roundtrip<T: Codable>(value: T) throws -> T {
@@ -121,7 +125,7 @@ class MsgPackTests: XCTestCase {
 
 	func testExample() {
 		do {
-			print("roundtrip:", try roundtrip(value: "Simple 🎁"))
+			print("roundtrip:", try roundtrip(value: Simple(a: true, b: false, c: true, d: false, e: nil, f: -8)))
 		} catch {
 			print(error)
 		}
