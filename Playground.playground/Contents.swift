@@ -33,10 +33,7 @@ let graph = Graph(
 	]
 )
 
-let encodedGraph = try encoder.encode(graph)
-for byte in encodedGraph {
-	print(String(byte, radix:16))
-}
+try encoder.encode(graph)
 
 let decoder = Decoder()
 
@@ -44,4 +41,13 @@ func roundtrip<T: Codable>(value: T) throws -> T {
 	return try decoder.decode(T.self, from: encoder.encode(value))
 }
 
-try roundtrip(value: "Hello")
+struct Simple: Codable {
+	let a: Bool
+	let b: Bool
+	let c: Bool?
+	let d: Bool?
+	let e: Bool?
+}
+
+try roundtrip(value: -56.4)
+try roundtrip(value: Simple(a: true, b: false, c: true, d: false, e: nil))

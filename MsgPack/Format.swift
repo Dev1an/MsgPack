@@ -52,22 +52,19 @@ public enum FormatID: UInt8 {
 	case `false` = 0xC2
 	case `true`
 	
-	case bin8
-	case bin16
-	case bin32
+//	case bin8
+//	case bin16
+//	case bin32
+//
+//	case ext8
+//	case ext16
+//	case ext32
 	
-	case ext8
-	case ext16
-	case ext32
-	
-	case float32
+	case float32 = 0xCA
 	case float64
 
-	case firstPositiveInt7 = 0b00000000
-	case lastPositiveInt7  = 0b01111111
-	
-	case firstNegativeInt5 = 0b11100000
-	case lastNegativeInt5  = 0b11111111
+	case positiveInt7 = 0b00000000
+	case negativeInt5 = 0b11100000
 
 	case uInt8 = 0xCC
 	case uInt16
@@ -79,27 +76,31 @@ public enum FormatID: UInt8 {
 	case int32
 	case int64
 	
-	case fixExt1
-	case fixExt2
-	case fixExt4
-	case fixExt8
-	case fixExt16
+//	case fixExt1
+//	case fixExt2
+//	case fixExt4
+//	case fixExt8
+//	case fixExt16
 
-	case fixStringStart = 0b10100000
-	case fixStringEnd   = 0b10111111
+	case fixString = 0b10100000
 	case string8 = 0xD9
 	case string16
 	case string32
 	
-	case fixArrayStart = 0b10010000
-	case fixArrayEnd   = 0b10011111
+	case fixArray = 0b10010000
 	case array16 = 0xDC
 	case array32
 	
-	case fixMapStart = 0b10000000
-	case fixMapEnd   = 0b10001111
+	case fixMap = 0b10000000
 	case map16 = 0xDE
 	case map32
+	
+	static let positiveInt7Range = FormatID.positiveInt7.rawValue ..< FormatID.fixMap.rawValue
+	static let negativeInt5Range = FormatID.negativeInt5.rawValue ..< 0b11111111
+	
+	static let fixMapRange = FormatID.fixMap.rawValue ..< FormatID.fixArray.rawValue
+	static let fixArrayRange = FormatID.fixArray.rawValue ..< FormatID.fixString.rawValue
+	static let fixStringRange = FormatID.fixString.rawValue ..< FormatID.nil.rawValue
 }
 
 extension Format {
@@ -116,9 +117,9 @@ extension Format {
 			
 		// MARK: Small integers (< 8 bit)
 		case .positiveInt7(let value):
-			data.append(value | FormatID.firstPositiveInt7.rawValue)
+			data.append(value | FormatID.positiveInt7.rawValue)
 		case .negativeInt5(let value):
-			data.append(value | FormatID.firstNegativeInt5.rawValue)
+			data.append(value | FormatID.negativeInt5.rawValue)
 			
 		// MARK: Unsigned integers
 		case .uInt8(let value):
@@ -179,7 +180,7 @@ extension Format {
 		// MARK: Strings
 		case .fixString(let utf8Data):
 			precondition(utf8Data.count < 32, "fix strings cannot contain more than 31 bytes")
-			data.append( UInt8(utf8Data.count) | FormatID.fixStringStart.rawValue)
+			data.append( UInt8(utf8Data.count) | FormatID.fixString.rawValue)
 			data.append(utf8Data)
 		case .string8(let utf8Data):
 			data.append(contentsOf: [FormatID.string8.rawValue, UInt8(utf8Data.count)])
@@ -200,7 +201,7 @@ extension Format {
 		// MARK: Arrays
 		case .fixArray(let array):
 			precondition(array.count < 16, "fix arrays cannot contain more than 15 elements")
-			data.append( UInt8(array.count) | FormatID.fixArrayStart.rawValue)
+			data.append( UInt8(array.count) | FormatID.fixArray.rawValue)
 			for element in array {
 				element.appendTo(data: &data)
 			}
@@ -224,7 +225,7 @@ extension Format {
 		// MARK: Maps
 		case .fixMap(let pairs):
 			precondition(pairs.count < 16, "fix maps cannot contain more than 15 key-value pairs")
-			data.append( UInt8(pairs.count) | FormatID.fixMapStart.rawValue)
+			data.append( UInt8(pairs.count) | FormatID.fixMap.rawValue)
 			for (key, value) in pairs {
 				key.appendTo(data: &data)
 				value.appendTo(data: &data)
@@ -329,42 +330,50 @@ extension Format {
 }
 
 extension Format {
-	static func string(from data: inout Data, offset: Int = 0) throws -> String {
-		switch data[offset] {
-		case FormatID.fixStringStart.rawValue ... FormatID.fixStringEnd.rawValue:
-			let length = Int(data[offset] & 0b00011111)
+	static func string(from data: inout Data, base: inout Int) throws -> String {
+		switch data[base] {
+		case FormatID.fixStringRange:
+			let length = Int(data[base] & 0b00011111)
+			base += 1
 			guard let string = data.withUnsafeMutableBytes({
-				String(bytesNoCopy: $0.advanced(by: offset + 1), length: length, encoding: .utf8, freeWhenDone: false)
+				String(bytesNoCopy: $0.advanced(by: base), length: length, encoding: .utf8, freeWhenDone: false)
 			}) else {
 				throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "not a valid string"))
 			}
+			base += length
 			return string
 		case FormatID.string8.rawValue:
-			let length = Int(data[offset + 1])
+			let length = Int(data[base + 1])
+			base += 2
 			guard let string = data.withUnsafeMutableBytes({
-				String(bytesNoCopy: $0.advanced(by: offset + 2), length: length, encoding: .utf8, freeWhenDone: false)
+				String(bytesNoCopy: $0.advanced(by: base), length: length, encoding: .utf8, freeWhenDone: false)
 			}) else {
 				throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "not a valid string"))
 			}
+			base += length
 			return string
 		case FormatID.string16.rawValue:
-			let length = Int(data.bigEndianInteger(at: offset) as UInt16)
+			let length = Int(data.bigEndianInteger(at: base + 1) as UInt16)
+			base += 3
 			guard let string = data.withUnsafeMutableBytes({
-				String(bytesNoCopy: $0.advanced(by: offset + 3), length: length, encoding: .utf8, freeWhenDone: false)
+				String(bytesNoCopy: $0.advanced(by: base), length: length, encoding: .utf8, freeWhenDone: false)
 			}) else {
 				throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "not a valid string"))
 			}
+			base += length
 			return string
 		case FormatID.string32.rawValue:
-			let length = Int(data.bigEndianInteger(at: offset) as UInt16)
+			let length = Int(data.bigEndianInteger(at: base + 1) as UInt16)
+			base += 5
 			guard let string = data.withUnsafeMutableBytes({
-				String(bytesNoCopy: $0.advanced(by: offset + 5), length: length, encoding: .utf8, freeWhenDone: false)
+				String(bytesNoCopy: $0.advanced(by: base), length: length, encoding: .utf8, freeWhenDone: false)
 			}) else {
 				throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "not a valid string"))
 			}
+			base += length
 			return string
 		default:
-			throw DecodingError.typeMismatch(String.self, .init(codingPath: [], debugDescription: "Wrong string format: \(data[offset])"))
+			throw DecodingError.typeMismatch(String.self, .init(codingPath: [], debugDescription: "Wrong string format: \(data[base])"))
 		}
 	}
 }

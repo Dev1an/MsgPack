@@ -16,11 +16,13 @@ class MsgPackTests: XCTestCase {
 	//    }
 
 	var encoder: MsgPack.Encoder!
+	var decoder: MsgPack.Decoder!
 
 	override func setUp() {
 		super.setUp()
 
 		encoder = Encoder()
+		decoder = Decoder()
 	}
 
 
@@ -108,9 +110,18 @@ class MsgPackTests: XCTestCase {
 		}
 	}
 	
+	struct Simple: Codable {
+		let a: Bool
+		let b: Bool
+	}
+
+	func roundtrip<T: Codable>(value: T) throws -> T {
+		return try decoder.decode(T.self, from: encoder.encode(value))
+	}
+
 	func testExample() {
 		do {
-			print(try encoder.encode([[Int8(-3)], [5], [8]]))
+			print("roundtrip:", try roundtrip(value: Simple(a: false, b: false)))
 		} catch {
 			print(error)
 		}

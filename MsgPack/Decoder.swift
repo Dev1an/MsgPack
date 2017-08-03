@@ -24,13 +24,15 @@ class IntermediateDecoder: Swift.Decoder {
 	
 	var storage: Data
 	var offset = 0
+
+	var dictionary = [String:(FormatID, Int)]()
 	
 	init(with data: Data) {
 		storage = data
 	}
 	
 	func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> where Key : CodingKey {
-		fatalError()
+		return KeyedDecodingContainer(try MsgPckKeyedDecodingContainer<Key>(referringTo: self, at: offset, with: []))
 	}
 	
 	func unkeyedContainer() throws -> UnkeyedDecodingContainer {
@@ -38,21 +40,18 @@ class IntermediateDecoder: Swift.Decoder {
 	}
 	
 	func singleValueContainer() throws -> SingleValueDecodingContainer {
-		return MsgPckSingleValueDecodingContainer(refferingTo: self)
+		return MsgPckSingleValueDecodingContainer(decoder: self, base: 0, codingPath: [])
 	}
 }
 
 struct MsgPckSingleValueDecodingContainer: SingleValueDecodingContainer {
-	var codingPath = [CodingKey]()
-	var decoder: IntermediateDecoder
-	var base = 0
+	let decoder: IntermediateDecoder
+	var base: Int
+
+	var codingPath: [CodingKey]
 
 	enum Error: Swift.Error {
 		case invalidFormat(UInt8)
-	}
-	
-	init(refferingTo decoder: IntermediateDecoder) {
-		self.decoder = decoder
 	}
 	
 	func decodeNil() -> Bool {
@@ -147,8 +146,8 @@ struct MsgPckSingleValueDecodingContainer: SingleValueDecodingContainer {
 		return .init(bitPattern: bitPattern)
 	}
 	
-	func decode(_ type: String.Type) throws -> String {
-		return try Format.string(from: &decoder.storage)
+	mutating func decode(_ type: String.Type) throws -> String {
+		return try Format.string(from: &decoder.storage, base: &base)
 	}
 	
 	func decode<T>(_ type: T.Type) throws -> T where T : Decodable {
@@ -159,18 +158,92 @@ struct MsgPckSingleValueDecodingContainer: SingleValueDecodingContainer {
 struct MsgPckKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtocol {
 	var codingPath: [CodingKey]
 	
-	var allKeys: [K]
+	let decoder: IntermediateDecoder
+	var base = 0
+
+	var allKeys = [K]()
+	
+	init(referringTo decoder: IntermediateDecoder, at base: Int, with codingPath: [CodingKey]) throws {
+		self.codingPath = codingPath
+		self.decoder = decoder
+		self.base = base
+		
+		let elementCount: Int
+		switch decoder.storage[base] {
+		case FormatID.fixMapRange:
+			elementCount = Int(decoder.storage[base] - FormatID.fixMap.rawValue)
+			self.base += 1
+		case FormatID.map16.rawValue:
+			elementCount = Int(decoder.storage.bigEndianInteger(at: base+1) as UInt16)
+			self.base += 3
+		case FormatID.map32.rawValue:
+			elementCount = Int(decoder.storage.bigEndianInteger(at: base+1) as UInt32)
+			self.base += 5
+		default:
+			throw DecodingError.typeMismatch(Dictionary<String,Any>.self, .init(codingPath: codingPath, debugDescription: "Expected a MsgPack map format, but found 0x\(String(decoder.storage[base], radix: 16))"))
+		}
+		for cursor in 0 ..< elementCount {
+			let key = try Format.string(from: &decoder.storage, base: &self.base)
+			
+			let valueFormat: FormatID
+			if let valueFormatLookup = FormatID(rawValue: decoder.storage[self.base]) {
+				valueFormat = valueFormatLookup
+			} else {
+				switch decoder.storage[self.base] {
+				case FormatID.fixMapRange:
+					valueFormat = .fixMap
+				case FormatID.fixStringRange:
+					valueFormat = .fixString
+				case FormatID.positiveInt7Range:
+					valueFormat = .positiveInt7
+				case FormatID.negativeInt5Range:
+					valueFormat = .negativeInt5
+				default:
+					throw DecodingError.dataCorrupted(.init(codingPath: codingPath, debugDescription: "Unknown format: 0x\(String(decoder.storage[self.base], radix: 16))"))
+				}
+			}
+			
+			let length: Int
+			switch valueFormat {
+			case .positiveInt7, .negativeInt5, .fixArray, .fixMap, .fixString:
+				length = Int(decoder.storage[self.base] - valueFormat.rawValue)
+				self.base += length + 1
+			case .uInt8, .int8, .string8:
+				length = Int(decoder.storage[self.base+1])
+				self.base += length + 2
+			case .uInt16, .int16, .string16, .array16, .map16:
+				length = Int(decoder.storage.bigEndianInteger(at: self.base + 1) as UInt16)
+				self.base += length + 3
+			case .uInt32, .int32, .string32, .array32, .map32, .float32:
+				length = Int(decoder.storage.bigEndianInteger(at: self.base + 1) as UInt32)
+				self.base += length + 5
+			case .uInt64, .int64, .float64:
+				length = Int(decoder.storage.bigEndianInteger(at: self.base + 1) as UInt64)
+				self.base += length + 9
+			case .nil, .false, .true:
+				length = 0
+				self.base += 1
+			}
+			decoder.dictionary[key] = (valueFormat, length)
+		}
+	}
 	
 	func contains(_ key: K) -> Bool {
-		fatalError("not implemented")
+		return decoder.dictionary[key.stringValue] != nil
 	}
 	
 	func decodeNil(forKey key: K) throws -> Bool {
-		fatalError("not implemented")
+		return decoder.dictionary[key.stringValue]?.0 == FormatID.nil
 	}
 	
 	func decode(_ type: Bool.Type, forKey key: K) throws -> Bool {
-		fatalError("not implemented")
+		let format = decoder.dictionary[key.stringValue]!.0
+		switch format {
+		case .true, .false:
+			return format == .true
+		default:
+			throw DecodingError.typeMismatch(type, .init(codingPath: codingPath, debugDescription: "Expected bool but found \(format)"))
+		}
 	}
 	
 	func decode(_ type: Int.Type, forKey key: K) throws -> Int {
@@ -246,5 +319,4 @@ struct MsgPckKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtoco
 	}
 	
 	typealias Key = K
-	
 }
